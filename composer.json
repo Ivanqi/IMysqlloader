@@ -1,0 +1,87 @@
+{
+  "name": "swoft/swoft",
+  "type": "project",
+  "keywords": [
+    "php",
+    "swoole",
+    "swoft"
+  ],
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/Ivanqi/SnowflakeIdWorker.git"
+    }
+  ],
+  "description": "Modern High performance AOP and Coroutine PHP Framework",
+  "license": "Apache-2.0",
+  "require": {
+    "php": ">7.1",
+    "ext-pdo": "*",
+    "ext-redis": "*",
+    "ext-json": "*",
+    "ext-simplexml": "*",
+    "ext-libxml": "*",
+    "ext-mbstring": "*",
+    "swoft/db": "v2.0.7",
+    "swoft/i18n": "v2.0.7",
+    "swoft/view": "v2.0.7",
+    "swoft/task": "v2.0.7",
+    "swoft/redis": "v2.0.7",
+    "swoft/framework": "v2.0.7",
+    "swoft/http-server": "v2.0.7",
+    "swoft/rpc-client": "v2.0.7",
+    "swoft/rpc-server": "v2.0.7",
+    "swoft/websocket-server": "v2.0.7",
+    "swoft/tcp-server": "v2.0.7",
+    "swoft/process": "v2.0.7",
+    "swoft/apollo": "v2.0.7",
+    "swoft/consul": "v2.0.7",
+    "swoft/limiter": "v2.0.7",
+    "swoft/breaker": "v2.0.7",
+    "swoft/crontab": "v2.0.7",
+    "swoft/devtool": "v2.0.7",
+    "swoft/stdlib": "v2.0.7",
+    "swoft/server": "v2.0.7",
+    "swoft/proxy": "v2.0.7",
+    "swoft/aop": "v2.0.7",
+    "swoft/log": "v2.0.7",
+    "swoft/error": "v2.0.7",
+    "swoft/console": "v2.0.7",
+    "swoft/event": "v2.0.7",
+    "swoft/annotation": "v2.0.7",
+    "swoft/bean": "v2.0.7",
+    "swoft/validator": "v2.0.7",
+    "swoft/http-message": "v2.0.7",
+    "swoft/rpc": "v2.0.7",
+    "swoft/tcp" : "v2.0.7"
+  },
+  "require-dev": {
+    "swoft/swoole-ide-helper": "dev-master",
+    "phpunit/phpunit": "^7.5",
+    "Ivanqi/SnowflakeIdWorker": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    },
+    "files": [
+      "app/Helper/Functions.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "AppTest\\Testing\\": "test/testing",
+      "AppTest\\Unit\\": "test/unit"
+    }
+  },
+  "scripts": {
+    "post-root-package-install": [
+      "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+    ],
+    "test": [
+      "./vendor/bin/phpstan analyze",
+      "./vendor/bin/phpunit -c phpunit.xml"
+    ],
+    "cs-fix": "./bin/php-cs-fixer fix --dry-run --diff --diff-format=udiff"
+  }
+}
