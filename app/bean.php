@@ -55,6 +55,27 @@ return [
         'formatter' => \bean('lineFormatter'),
         'levels' => 'error, warning'
     ],
+    'db' => [
+        'class'    => Swoft\Db\Database::class,
+        'dsn'      => env('DB_DNS', 'mysql:dbname=dbname;host=127.0.0.1:3306'),
+        'username' => env('DB_USER_NAME', 'test'),
+        'password' => env('DB_PASSWORD', 'test'),
+        'charset'  => 'utf8mb4',
+        'options'  => [
+            PDO::ATTR_CASE => PDO::CASE_NATURAL
+        ],
+        'dbSelector' => bean(DbSelector::class),
+        'config'   => [
+            'collation' => 'utf8mb4_unicode_ci',
+            'strict'    => true,
+            'timezone'  => '+8:00',
+            'modes'     => 'NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES', 
+            'fetchMode' => PDO::FETCH_ASSOC
+    	]
+    ],
+    'db.pool' => [
+        'database' => bean('db')
+    ],
     'redis'             => [
         'class'    => RedisDb::class,
         'host'     => '127.0.0.1',
