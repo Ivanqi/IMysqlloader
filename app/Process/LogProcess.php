@@ -18,6 +18,8 @@ use Swoole\Process\Pool;
 use Swoft\Redis\Redis;
 use App\Common\SystemUsage;
 use App\Common\InsertStatementExtension;
+use Swoft\Db\DB;
+use App\Common\DataBaseRuleTransform;
 
 /**
  * Class LogProcess
@@ -40,15 +42,17 @@ class LogProcess implements ProcessInterface
     private static $kafkaConsumerFailJob = '';
     private static $kafkaConsumerPrefix = '';
     private static $appLog;
+    private static $dbRuleInstance;
+    private static $agentConfig = [];
 
     public function __construct()
     {
-        self::$projectID = config('base.project_id');
-        self::$projectName = config('base.project_name');
-
+        self::$projectID = (int) config('project_config.project_id');
+        self::$projectName = config('project_config.project_name');
         self::$kafkaConsumerAddr = config('kafka_config.kafka_consmer_addr');
         self::$groupId = config('kafka_config.kafka_consumer_group');
         self::$appLog = config('app_log_' . self::$projectID);
+        self::$agentConfig = config('agent_config_' . self::$projectID);
 
         self::$consumerTime = config('kafka_config.kafka_consumer_time');
         self::$kafkaConsumerFailJob = config('kafka_config.kafka_consumer_fail_job');
@@ -56,7 +60,8 @@ class LogProcess implements ProcessInterface
 
         self::$consumerConf = self::kafkaConsumerConf();
         
-        self::$topicNames = self::getTopicName(self::$runProject, array_keys(self::$appLog), self::$kafkaConsumerPrefix);
+        self::$topicNames = self::getTopicName(self::$projectID, array_keys(self::$appLog), self::$kafkaConsumerPrefix);
+        self::$dbRuleInstance = DataBaseRuleTransform::getInstance();
     }
 
     private static function kafkaConsumerConf(): \RdKafka\Conf
@@ -109,7 +114,7 @@ class LogProcess implements ProcessInterface
             default:
                 throw new \Exception($err);
         }
-    }   
+    }
 
     /**
      * @param Pool $pool
@@ -117,18 +122,18 @@ class LogProcess implements ProcessInterface
      */
     public function run(Pool $pool, int $workerId): void
     { 
-        // if (self::$consumer == NULL) {
-        //     self::$consumer = new \RdKafka\KafkaConsumer(self::$consumerConf);
-        // }
-        // self::$consumer->subscribe(self::$topicNames);
+        if (self::$consumer == NULL) {
+            self::$consumer = new \RdKafka\KafkaConsumer(self::$consumerConf);
+        }
+        self::$consumer->subscribe(self::$topicNames);
 
-        // while (self::$runProject > 0) {
-        //     $syData = SystemUsage::getCpuWithMem();
-        //     if ($syData['cpu_idle_rate'] > SystemUsage::$defaultMinCpuIdleRate && $syData['mem_usage'] < SystemUsage::$defaultMaxMemUsage) {
-        //         self::kafkaConsumer(self::$consumer);
-        //     }
-        //     Coroutine::sleep(1);
-        // }
+        while (self::$runProject > 0) {
+            $syData = SystemUsage::getCpuWithMem();
+            if ($syData['cpu_idle_rate'] > SystemUsage::$defaultMinCpuIdleRate && $syData['mem_usage'] < SystemUsage::$defaultMaxMemUsage) {
+                self::kafkaConsumer(self::$consumer);
+            }
+            Coroutine::sleep(1);
+        }
     }
 
     private static function handleConsumerMessage(\RdKafka\Message $message): void
@@ -136,14 +141,38 @@ class LogProcess implements ProcessInterface
         try {
             $topicName = $message->topic_name;
             $recordName = substr($topicName, strlen(self::$kafkaConsumerPrefix . self::$projectID . '_') + 1);
+            if (!isset(self::$appLog[$recordName])) {
+                // 放入REDIS中
+                throw new \Exception("APP LOG 配置中不存在对应的Record: ". $recordName);
+            }
             if ($message->payload) {
                 $payload = json_decode($message->payload, true);
-                
+
+                self::insertData($payload, $recordName);
+                unset($payload);
             }
         } catch (\Exception $e) {
             CLog::error($e->getMessage() . '(' . $e->getLine() .')');
         }
     }
+
+    private static function insertData(array $payload, $recordConfig): void
+    {
+        $backgrouds = $recordConfig['backgrouds'];
+        $tableName = $recordConfig['table'];
+        $saveMode = $recordConfig['save_mode'];
+        $sql = InsertStatementExtension::makeMultiInsertSql($payload, $tableName);
+        try {
+            foreach($backgrouds as $bg) {
+               $dbName = self::$dbRuleInstance->getDBName($bg, self::$projectName);
+                $ret = DB::db($dbName)->insert($sql);
+                if (!$ret) {
+                }
+            }
+        } catch(\Exception $e) {
+        }
+    }
+
 
     private static function kafkaProducer($recordName, string $data): bool
     {
@@ -153,7 +182,7 @@ class LogProcess implements ProcessInterface
 
         if (empty($data)) return false;
 
-        $topicName = sprintf(self::$topicRule, self::$kafkaProducerPrefix, self::$runProject, $recordName);
+        $topicName = sprintf(self::$topicRule, self::$kafkaProducerPrefix, self::$projectID, $recordName);
 
         if (!isset(self::$producerTopic[$topicName])) {
             self::$producerTopic[$topicName] = self::$producer->newTopic($topicName);

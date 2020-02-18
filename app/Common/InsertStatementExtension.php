@@ -4,41 +4,81 @@ namespace App\Common;
 
 class InsertStatementExtension
 {
-    public static function makeInsertIgoreSql(array $data, string $table): string
+    const normal = 'normal';
+    const replace = 'replace';
+    const update = 'update';
+
+    private static $insertTemplate = [
+        self::normal => 'INSERT IGNORE INTO %s (%s) VALUES %s',
+        self::replace => 'REPLACE INTO %s (%s) VALUES %s',
+        self::update => 'INSERT INTO %s (%s) VALUES %s ON DUPLICATE KEY UPDATE %s'
+    ];
+
+    private static $singleInsertFunc = [
+        self::normal => 'makeInsertIgoreSql',
+        self::replace => 'makeReplaceIntoSql',
+        self::update => 'makeDuplicateInsertSql'
+    ];
+
+    private static $multiInsertFunc = [
+        self::normal => 'makeMultiInsertIgoreSql',
+        self::replace => 'makeMultiReplaceIntoSql',
+        self::update => 'makeMutilDuplicateInsertSql'
+    ];
+    private static $saveMode = '';
+
+   
+    public static function makeSingleInsertSql(array $data, string $table, string $mode = self::normal): string
+    {
+        if (!isset(self::$singleInsertFunc[$mode])) {
+            throw new \Exception('访问不存在方法');
+        }
+        self::$saveMode = $mode;
+        return call_user_func_array([__CLASS__, self::$singleInsertFunc[$mode]], [$data, $table]);
+    }
+
+    public static function makeMultiInsertSql(array $data, string $table, string $mode = self::normal): string
+    {
+        if (!isset(self::$multiInsertFunc[$mode])) {
+            throw new \Exception('访问不存在方法');
+        }
+        self::$saveMode = $mode;
+        return call_user_func_array([__CLASS__, self::$multiInsertFunc[$mode]], [$data, $table]);
+    }
+
+    private static function makeInsertIgoreSql(array $data, string $table): string
     {
         if (!is_array($data)) return '';
 
         $keyStr = '';
         $valStr = '';
-        $sqlTemplate = 'INSERT IGNORE INTO %s (%s) VALUES (%s)';
         foreach ($data as $key => $val) {
             $keyStr .= "`{$key}`,";
             $valStr .= "'{$val}',";
         }
 
-        $sql = sprintf($sqlTemplate, $table, trim($keyStr, ', '), trim($valStr, ', '));
+        $sql = sprintf(self::$insertTemplate[self::$saveMode], $table, trim($keyStr, ', '), '(' . trim($valStr, ', ') . ')' );
         unset($data);
         return $sql;
     }
 
-    public static function makeReplaceIntoSql(array $data, string $table): string
+    private static function makeReplaceIntoSql(array $data, string $table): string
     {
         if (!is_array($data)) return '';
 
         $keyStr = '';
         $valStr = '';
-        $sqlTemplate = 'REPLACE INTO %s (%s) VALUES (%s)';
         foreach ($data as $key => $val) {
             $keyStr .= "`{$key}`,";
             $valStr .= "'{$val}',";
         }
 
-        $sql = sprintf($sqlTemplate, $table, trim($keyStr, ', '), trim($valStr, ', '));
+        $sql = sprintf(self::$insertTemplate[self::$saveMode], $table, trim($keyStr, ', '), '(' . trim($valStr, ', ') . ')');
         unset($data);
         return $sql;
     }
 
-    public static function makeDuplicateInsertSql(array $data, string $table): string
+    private static function makeDuplicateInsertSql(array $data, string $table): string
     {
         if (!is_array($data)) return '';
 
@@ -46,19 +86,18 @@ class InsertStatementExtension
         $valStr = '';
         $updateStr = '';
 
-        $sqlTemplate = 'INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s';
         foreach ($data as $key => $val) {
             $keyStr .= "`{$key}`,";
             $valStr .= "'{$val}',";
             $updateStr .= "`$key` = '$val',";
         }
-        $sql = sprintf($sqlTemplate, $table, trim($keyStr, ', '), trim($valStr, ', '), trim($updateStr, ","));
+        $sql = sprintf(self::$insertTemplate[self::$saveMode], $table, trim($keyStr, ', '), '(' . trim($valStr, ', ') . ')', trim($updateStr, ","));
         unset($data);
         return $sql;
     }
 
     // 处理二维数组
-    public static function makeMultiInsertIgoreSql(array $data, string $table)
+    private static function makeMultiInsertIgoreSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
 
@@ -91,7 +130,7 @@ class InsertStatementExtension
     }
 
     // 处理二维数组
-    public static function makeMultiReplaceIntoSql(array $data, string $table)
+    private static function makeMultiReplaceIntoSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
 
@@ -124,7 +163,7 @@ class InsertStatementExtension
     }
 
     // 处理二维数组
-    public static function makeMutilDuplicateInsertSql(array $data, string $table)
+    private static function makeMutilDuplicateInsertSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
 

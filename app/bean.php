@@ -64,7 +64,7 @@ return [
         'options'  => [
             PDO::ATTR_CASE => PDO::CASE_NATURAL
         ],
-        'dbSelector' => bean(DbSelector::class),
+        // 'dbSelector' => bean(DbSelector::class),
         'config'   => [
             'collation' => 'utf8mb4_unicode_ci',
             'strict'    => true,
