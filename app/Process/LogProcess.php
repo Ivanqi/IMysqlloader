@@ -24,7 +24,7 @@ use App\Common\DataBaseHandleFunc;
  *
  * @since 2.0
  *
- * @Process(workerId={0,1})
+ * @Process(workerId={0,1,2})
  */
 class LogProcess implements ProcessInterface
 {
@@ -41,6 +41,7 @@ class LogProcess implements ProcessInterface
     private static $kafkaConsumerPrefix = '';
     private static $appLog;
     private static $dbHandleFuncInstance;
+    private static $failJobName = '';
 
     public function __construct()
     {
@@ -49,6 +50,7 @@ class LogProcess implements ProcessInterface
         self::$kafkaConsumerAddr = config('kafka_config.kafka_consmer_addr');
         self::$groupId = config('kafka_config.kafka_consumer_group');
         self::$appLog = config('app_log_' . self::$projectID);
+        self::$failJobName = config('fail_logjob.fail_queue_name');
        
 
         self::$consumerTime = config('kafka_config.kafka_consumer_time');
@@ -138,11 +140,13 @@ class LogProcess implements ProcessInterface
         try {
             $topicName = $message->topic_name;
             $recordName = substr($topicName, strlen(self::$kafkaConsumerPrefix . self::$projectID . '_') + 1);
-            if (!isset(self::$appLog[$recordName])) {
-                // 放入REDIS中
-                throw new \Exception("APP LOG 配置中不存在对应的Record: ". $recordName);
-            }
             if ($message->payload) {
+                if (!isset(self::$appLog[$recordName])) {
+                    // 放入REDIS中
+                    $queueName = sprintf(self::$failJobName, $recordName);
+                    Redis::PUSH($queueName, $message->payload);
+                    throw new \Exception("APP LOG 配置中不存在对应的Record: ". $recordName);
+                }
                 $payload = json_decode($message->payload, true);
 
                 self::insertData($payload, $recordName);
