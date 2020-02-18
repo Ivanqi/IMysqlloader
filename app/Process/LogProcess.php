@@ -17,9 +17,7 @@ use Swoole\Coroutine;
 use Swoole\Process\Pool;
 use Swoft\Redis\Redis;
 use App\Common\SystemUsage;
-use App\Common\InsertStatementExtension;
-use Swoft\Db\DB;
-use App\Common\DataBaseRuleTransform;
+use App\Common\DataBaseHandleFunc;
 
 /**
  * Class LogProcess
@@ -42,8 +40,7 @@ class LogProcess implements ProcessInterface
     private static $kafkaConsumerFailJob = '';
     private static $kafkaConsumerPrefix = '';
     private static $appLog;
-    private static $dbRuleInstance;
-    private static $agentConfig = [];
+    private static $dbHandleFuncInstance;
 
     public function __construct()
     {
@@ -52,7 +49,7 @@ class LogProcess implements ProcessInterface
         self::$kafkaConsumerAddr = config('kafka_config.kafka_consmer_addr');
         self::$groupId = config('kafka_config.kafka_consumer_group');
         self::$appLog = config('app_log_' . self::$projectID);
-        self::$agentConfig = config('agent_config_' . self::$projectID);
+       
 
         self::$consumerTime = config('kafka_config.kafka_consumer_time');
         self::$kafkaConsumerFailJob = config('kafka_config.kafka_consumer_fail_job');
@@ -61,7 +58,7 @@ class LogProcess implements ProcessInterface
         self::$consumerConf = self::kafkaConsumerConf();
         
         self::$topicNames = self::getTopicName(self::$projectID, array_keys(self::$appLog), self::$kafkaConsumerPrefix);
-        self::$dbRuleInstance = DataBaseRuleTransform::getInstance();
+        self::$dbHandleFuncInstance = DataBaseHandleFunc::getInstance(self::$projectName, self::$projectID);
     }
 
     private static function kafkaConsumerConf(): \RdKafka\Conf
@@ -161,13 +158,9 @@ class LogProcess implements ProcessInterface
         $backgrouds = $recordConfig['backgrouds'];
         $tableName = $recordConfig['table'];
         $saveMode = $recordConfig['save_mode'];
-        $sql = InsertStatementExtension::makeMultiInsertSql($payload, $tableName);
         try {
             foreach($backgrouds as $bg) {
-               $dbName = self::$dbRuleInstance->getDBName($bg, self::$projectName);
-                $ret = DB::db($dbName)->insert($sql);
-                if (!$ret) {
-                }
+                self::$dbHandleFuncInstance($bg, $saveMode, $tableName, $payload);
             }
         } catch(\Exception $e) {
         }

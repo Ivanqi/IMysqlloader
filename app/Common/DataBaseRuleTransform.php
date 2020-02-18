@@ -14,7 +14,7 @@ class DataBaseRuleTransform
 
     public function __construct()
     {
-        $this->databaseRule = config('database_rule');
+        $this->databaseRule = config('database_rule.' . $this->dbIndex);
     }
 
     public static function getInstance():  \App\Common\DataBaseRuleTransform
@@ -27,13 +27,13 @@ class DataBaseRuleTransform
 
     public function getDBName($mode)
     {
-        if (!isset($this->databaseRule[$this->dbIndex][$mode])) {
+        if (!isset($this->databaseRule[$mode])) {
             throw new \Exception("不存在对应的数据库命名规则");
         }
         $args = func_get_args();
         array_shift($args);
         $numargs = count($args);
-        $modeConfig = $this->databaseRule[$this->dbIndex][$mode];
+        $modeConfig = $this->databaseRule[$mode];
         $parameter = $modeConfig[$this->dbParameter];
         $separator = $modeConfig[$this->dbSeparator];
         $arameterCheck = $modeConfig[$this->dbParameterCheck];

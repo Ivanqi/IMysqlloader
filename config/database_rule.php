@@ -14,5 +14,16 @@ return [
             'parameterCheck' => ['is_string', 'is_string'],
             'last_default' => 'common'
         ]
+    ],
+    'handlerFunc' => [
+        'admin' => [
+            'func' => 'adminHandlerFunc',
+            'need_parameter' => [
+                'agent_id', 'server_id'
+            ]
+        ],
+        'common' => [
+            'func' => 'commonHandlerFunc'
+        ]
     ]
 ];
