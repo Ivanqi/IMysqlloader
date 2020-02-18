@@ -160,7 +160,7 @@ class LogProcess implements ProcessInterface
         $saveMode = $recordConfig['save_mode'];
         try {
             foreach($backgrouds as $bg) {
-                self::$dbHandleFuncInstance($bg, $saveMode, $tableName, $payload);
+                self::$dbHandleFuncInstance->insertData($bg, $saveMode, $tableName, $payload);
             }
         } catch(\Exception $e) {
         }
