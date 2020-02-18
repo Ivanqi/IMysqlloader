@@ -57,25 +57,25 @@ class DataBaseHandleFunc
             $needCheckParameter = $this->handleFuncRule[$this->needParameter];
         }
         $error = false;
+        $connector = '-';
         foreach ($data as $v) {
             if (empty($needCheckParameter)) break;
             if (!isset($v[$needCheckParameter[0]]) || !isset($v[$needCheckParameter[1]])) $error = true; break;
-            $tmp[$v[$needCheckParameter[0]]][$v[$needCheckParameter[1]]][] = $v;
+            $tmp[$v[$needCheckParameter[0]] . $connector . $v[$needCheckParameter[1]]][] = $v;
         }
 
         if ($error == true || empty($tmp)) {
             throw new \Exception("数据格式异常。请检查数据来源");
         }
 
-        foreach ($tmp as $check1Key => $check1Val) {
+        foreach ($tmp as $checkKey => $val) {
+            @list($check1Key, $check2Key) = explode($connector, $check1Key);
             if (!isset($this->agentConfig[$check1Key])) $error == true; break;
-            foreach ($check1Val as $check2Key => $val) {
-                $dbName = $this->dataBaseRuleTransform($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
-                $sql = InsertStatementExtension::makeMultiInsertSql($val, $this->tableName, $this->saveMode);
-                $ret = DB::db($dbName)->insert($sql);
-                if (!$ret) {
+            $dbName = $this->dataBaseRuleTransform($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
+            $sql = InsertStatementExtension::makeMultiInsertSql($val, $this->tableName, $this->saveMode);
+            $ret = DB::db($dbName)->insert($sql);
+            if (!$ret) {
 
-                }
             }
         }
         unset($tmp);
