@@ -168,7 +168,8 @@ class LogProcess implements ProcessInterface
                 $ret = self::$dbHandleFuncInstance->insertData($bg, $saveMode, $tableName, $payload);
                 if ($ret == false) $flag = false;
             }
-        } catch(\Exception $e) {
+            return $flag;
+        } catch(\DataBaseHandleFuncException $e) {
             CLog::error(__CLASS__ . ':' . $e->getMessage());
             return false;
         }

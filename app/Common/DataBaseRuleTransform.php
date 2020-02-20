@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 namespace App\Common;
+use App\Exception\DataBaseRuleTransformException;
 
 class DataBaseRuleTransform
 {
@@ -28,7 +29,7 @@ class DataBaseRuleTransform
     public function getDBName($mode)
     {
         if (!isset($this->databaseRule[$mode])) {
-            throw new \Exception("不存在对应的数据库命名规则");
+            throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::NO_RULE);
         }
         $args = func_get_args();
         array_shift($args);
@@ -41,12 +42,12 @@ class DataBaseRuleTransform
             $parameter--;
         }
 
-        if ($numargs != $parameter) throw new \Exception("输入的参数和需要的不符，请重新检查");
+        if ($numargs != $parameter) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::PARAMETER_ERROR);
 
         $name = '';
         for ($i = 0; $i < $parameter; $i++) {
             $arg  = array_shift($args);
-            if (!$arameterCheck[$i]($arg)) throw new \Exception("类型不符合，请重新检查");
+            if (!$arameterCheck[$i]($arg)) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::TYPE_ERROR);
             $name .= $arg . $separator;
         }
 
@@ -56,7 +57,7 @@ class DataBaseRuleTransform
             $name = substr($name, 0, -1);
         }
 
-        if (empty($name)) throw new \Exception("数据库为空");
+        if (empty($name)) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::EMPTY_DATA);
 
         return $name;
     }
