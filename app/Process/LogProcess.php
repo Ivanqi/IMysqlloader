@@ -141,15 +141,15 @@ class LogProcess implements ProcessInterface
             $topicName = $message->topic_name;
             $recordName = substr($topicName, strlen(self::$kafkaConsumerPrefix . self::$projectID . '_') + 1);
             if ($message->payload) {
-                if (!isset(self::$appLog[$recordName])) {
-                    // 放入REDIS中
-                    $queueName = sprintf(self::$failJobName, $recordName);
-                    Redis::PUSH($queueName, $message->payload);
-                    throw new \Exception("APP LOG 配置中不存在对应的Record: ". $recordName);
-                }
                 $payload = json_decode($message->payload, true);
+                if (!isset(self::$appLog[$recordName])) {
+                    Redis::PUSH(self::$failJobName, json_encode([$recordName => $message->payload]));
+                    throw new \Exception("APP LOG 配置中不存在对应的Record: ". $recordName);
+                } 
 
-                self::insertData($payload, $recordName);
+                if (!self::insertData($payload, $recordName, self::$appLog[$recordName])) {
+                    Redis::PUSH(self::$failJobName, json_encode([$recordName => $message->payload]));
+                }
                 unset($payload);
             }
         } catch (\Exception $e) {
@@ -157,16 +157,20 @@ class LogProcess implements ProcessInterface
         }
     }
 
-    private static function insertData(array $payload, $recordConfig): void
+    private static function insertData(array $payload, string $recordName, $recordConfig): bool
     {
         $backgrouds = $recordConfig['backgrouds'];
         $tableName = $recordConfig['table'];
         $saveMode = $recordConfig['save_mode'];
+        $flag = true;
         try {
             foreach($backgrouds as $bg) {
-                self::$dbHandleFuncInstance->insertData($bg, $saveMode, $tableName, $payload);
+                $ret = self::$dbHandleFuncInstance->insertData($bg, $saveMode, $tableName, $payload);
+                if ($ret == false) $flag = false;
             }
         } catch(\Exception $e) {
+            CLog::error(__CLASS__ . ':' . $e->getMessage());
+            return false;
         }
     }
 

@@ -16,6 +16,7 @@ class DataBaseHandleFunc
     private $agentConfig = [];
     private $bg;
     private $tableName = '';
+    private $dbPoolName = '';
 
     private static $_instance;
 
@@ -26,6 +27,7 @@ class DataBaseHandleFunc
         $this->projectName = $projectName;
         $this->projectID = $projectID;
         $this->agentConfig = config('agent_config_' . $this->projectID);
+        self::$dbPoolName = config('project_config.db_pool_name');
     }
 
     public static function getInstance(string $projectName, int $projectID ):  \App\Common\DataBaseHandleFunc
@@ -38,14 +40,19 @@ class DataBaseHandleFunc
 
     public function insertData(string $bg, string $mode, string $tableName, array $data)
     {
-       if (!isset($this->handleFuncRule[$bg])) throw new \Exception(__CLASS__ . ": 不存在对应的规则");
+        try {
+            if (!isset($this->handleFuncRule[$bg])) throw new \Exception(__CLASS__ . ": 不存在对应的规则");
 
-       if (!method_exists($this, $this->handleFuncRule[$bg][$this->callFunc])) throw new \Exception(__CLASS__. ": 不存在对应的方法");
-       $this->bg = $bg;
-       $this->saveMode = $mode;
-       $this->tableName = $tableName;
+            if (!method_exists($this, $this->handleFuncRule[$bg][$this->callFunc])) throw new \Exception(__CLASS__. ": 不存在对应的方法");
+            $this->bg = $bg;
+            $this->saveMode = $mode;
+            $this->tableName = $tableName;
      
-       call_user_func_array([$this, $this->handleFuncRule[$bg]], [$data]);
+            call_user_func_array([$this, $this->handleFuncRule[$bg]], [$data]);
+        } catch(\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+       
     }
 
     private function adminHandlerFunc(array $data)
@@ -67,30 +74,46 @@ class DataBaseHandleFunc
         if ($error == true || empty($tmp)) {
             throw new \Exception("数据格式异常。请检查数据来源");
         }
-
-        foreach ($tmp as $checkKey => $val) {
-            @list($check1Key, $check2Key) = explode($connector, $check1Key);
-            if (!isset($this->agentConfig[$check1Key])) $error == true; break;
-            $dbName = $this->dataBaseRuleTransform($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
-            $sql = InsertStatementExtension::makeMultiInsertSql($val, $this->tableName, $this->saveMode);
-            $ret = DB::db($dbName)->insert($sql);
-            if (!$ret) {
-
-            }
-        }
-        unset($tmp);
         unset($data);
+        DB::connection(self::$dbPoolName)->beginTransaction();
+        $flag = true;
+        try {
+            foreach ($tmp as $checkKey => $val) {
+                @list($check1Key, $check2Key) = explode($connector, $check1Key);
+                if (!isset($this->agentConfig[$check1Key])) $error == true; break;
+                $dbName = $this->dataBaseRuleTransform($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
+                $sql = InsertStatementExtension::makeMultiInsertSql($val, $this->tableName, $this->saveMode);
+                $ret = DB::db($dbName)->insert($sql);
+                if ($ret == false) $flag = false; 
+            }
+            if ($flag) {
+                DB::connection(self::$dbPoolName)->commit();
+            } else {
+                DB::connection(self::$dbPoolName)->rollBack();
+                throw new \Exception(__CLASS__. ":" . __FUNCTION__ . ", 数据插入失败");
+            }
+            unset($tmp);
+        } catch(\Exception $e){
+            DB::connection(self::$dbPoolName)->rollBack();
+            throw new \Exception($e->getMessage());
+        }
     }
 
     private function commonHandlerFunc(array $data)
     {
-        $dbName = $this->dataBaseRuleTransform($this->bg, $projectName);
-        $sql = InsertStatementExtension::makeMultiInsertSql($data, $this->tableName, $this->saveMode);
-        $ret = DB::db($dbName)->insert($sql);
-        if (!$ret) {
-
+        DB::connection(self::$dbPoolName)->beginTransaction();
+        try {
+            $dbName = $this->dataBaseRuleTransform($this->bg, $projectName);
+            $sql = InsertStatementExtension::makeMultiInsertSql($data, $this->tableName, $this->saveMode);
+            $ret = DB::db($dbName)->insert($sql);
+            if ($ret) {
+                DB::connection(self::$dbPoolName)->commit();
+            } else {
+                throw new \Exception(__CLASS__. ":" . __FUNCTION__ . ", 数据插入失败");
+            }
+            unset($data);
+        } catch(\Exception $e) {
+            DB::connection(self::$dbPoolName)->rollBack();
         }
-
-        unset($data);
     }
 }
