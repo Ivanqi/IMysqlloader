@@ -94,10 +94,10 @@ class SystemUsage
     public static function getHardDiskUsage(): int
     {
         $output = shell_exec('df -lh | grep -E "^(/)"');
-        $rs = preg_replace("/\s{2,}/",' ',$output);  //把多个空格换成 “_”
+        $rs = preg_replace("/\s{2,}/",' ',$output);  // 把多个空格换成 “_”
         $hd = explode(" ",$rs);
-        $hd_avail = trim($hd[3],'G'); //磁盘可用空间大小 单位G
-        $hd_usage = trim($hd[4],'%'); //挂载点 百分比
+        $hd_avail = trim($hd[3],'G');               // 磁盘可用空间大小 单位G
+        $hd_usage = trim($hd[4],'%');               // 挂载点 百分比
         return $hd_usage;
 
     }

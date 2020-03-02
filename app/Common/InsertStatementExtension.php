@@ -98,7 +98,6 @@ class InsertStatementExtension
         return $sql;
     }
 
-    // 处理二维数组
     private function makeMultiInsertIgoreSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
@@ -130,7 +129,6 @@ class InsertStatementExtension
         return $sql;
     }
 
-    // 处理二维数组
     private function makeMultiReplaceIntoSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
@@ -162,7 +160,6 @@ class InsertStatementExtension
         return $sql;
     }
 
-    // 处理二维数组
     private function makeMutilDuplicateInsertSql(array $data, string $table)
     {
         if (!is_array($data)) return '';
