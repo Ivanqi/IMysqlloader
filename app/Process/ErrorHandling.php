@@ -26,6 +26,8 @@ class ErrorHandling implements ProcessInterface
         $errorHandlingRepositories = ErrorHandlingRepositories::getInstance();
         while (true) {
             if ($errorHandlingRepositories->check5minFailQueue()) {
+                $now = time();
+                $this->setTimeStampBy5min($now);
                 $errorHandlingRepositories->handle5minFailMessage();
             }
             $errorHandlingRepositories->handleFailMessage();

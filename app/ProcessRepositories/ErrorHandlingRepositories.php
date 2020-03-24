@@ -8,10 +8,8 @@ class ErrorHandlingRepositories
 {
     private static $_instance;
     private static $projectID;
-    private static $projectName;
     private static $queueName;
     private static $queueNameBy5min;
-    private static $commonFailQueueName;
     
     private static $dbHandlerFuncInstance;
     private static $failQueueName;
@@ -140,13 +138,7 @@ class ErrorHandlingRepositories
             CLog::error($e->getMessage() . '(' . $e->getLine() .')');
         }
     }
-
-    private function commonFail(string $queueName1, strig $queueName2, string $data): void
-    {
-        Redis::LPUSH($queueName1, $data);
-        Redis::LREM($queueName2, $data);
-    }
-
+    
     public function setEorrorMessage($topicName, $logData, $queueName = '')
     {
         if (empty($queueName)) {

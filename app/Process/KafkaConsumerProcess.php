@@ -59,8 +59,6 @@ class KafkaConsumerProcess implements ProcessInterface
         $consumer = new \RdKafka\KafkaConsumer($consumerConf);
         $consumer->subscribe($topicNames);
 
-
-
         while (self::$runProject > 0) {
             if (self::$systemMonitorCode == SystemMonitorProcessRepositories::SUCCESS_CODE) {
                 $message = $consumer->consume($kafkakafkaProducer->getConsumerTime());
