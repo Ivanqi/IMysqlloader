@@ -15,7 +15,7 @@ class TopicsCommonRepositories
     private static $_instance;
     public static $runProject;
     private static $topicList;
-    private static $topicNums;
+    public static $topicNums;
     private static $projectType;
     private static $dataMaxChunkLimit = 0;
     private static $dbHandleFuncInstance;

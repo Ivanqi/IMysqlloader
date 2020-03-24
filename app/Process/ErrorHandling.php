@@ -25,10 +25,10 @@ class ErrorHandling implements ProcessInterface
     { 
         $errorHandlingRepositories = ErrorHandlingRepositories::getInstance();
         while (true) {
-            // if ($errorHandlingRepositories->check5minFailQueue()) {
-            //     $errorHandlingRepositories->handle5minFailMessage();
-            // }
-            // $errorHandlingRepositories->handleFailMessage();
+            if ($errorHandlingRepositories->check5minFailQueue()) {
+                $errorHandlingRepositories->handle5minFailMessage();
+            }
+            $errorHandlingRepositories->handleFailMessage();
             Coroutine::sleep(1);
         }
     }

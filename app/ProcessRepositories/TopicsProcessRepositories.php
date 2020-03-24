@@ -29,7 +29,6 @@ class TopicsProcessRepositories
     public function topicHandler()
     {
         $keyArr = self::$topicsCommonRepositories->getTopicsKey();
-        $kafkaData = [];
         $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
         $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
         try {

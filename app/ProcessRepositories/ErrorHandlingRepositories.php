@@ -21,15 +21,17 @@ class ErrorHandlingRepositories
     public static $maxTimeout;
     private static $topicsCommonRepositories;
     private static $kafkaTopicFailJobTemp;
-
+    private static $fiveMinTopicCommonRepositories;
    
 
     public function __construct()
     {
-        self::$topicsCommonRepositories = TopicsCommonRepositories::getInstance(config('fail_logjob.fail_queue_name'), config('fail_logjob.commo_queue_name'));
-        
         self::$queueNameBy5min = config('fail_logjob.5min_fail_queue_name');
-        self::$failQueueTimerKeyBy5min = config('queue_max_timeout.5min_fail_queue_timer');
+        $commoQueueName = config('fail_logjob.commo_queue_name');
+        self::$topicsCommonRepositories = TopicsCommonRepositories::getInstance(config('fail_logjob.fail_queue_name'), $commoQueueName);
+        self::$fiveMinTopicCommonRepositories = TopicsCommonRepositories::getInstance(self::$queueNameBy5min, $commoQueueName);
+        
+        self::$failQueueTimerKeyBy5min = config('fail_logjob.5min_fail_queue_timer');
         self::$maxTimeout = config('fail_logjob.queue_max_timeout');
         self::$failQueueName = config('fail_logjob.fail_queue_name');
         self::$kafkaTopicFailJobTemp = config('kafka_config.kafka_topic_fail_job');
@@ -75,13 +77,14 @@ class ErrorHandlingRepositories
 
     public function handleFailMessage(): void
     {
+        $keyArr = self::$topicsCommonRepositories->getTopicsKey();
+        $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
+        $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
+
         try {
-            $keyArr = self::$topicsCommonRepositories->getTopicsKey();
-            $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
-            $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
             if (empty($logData)) return;
 
-            $appLog = self::$topicsCommonRepositories;
+            $appLog = self::$topicsCommonRepositories::$appLog;
             if (!isset($appLog[$topicName])) {
                 throw new \Exception("APP LOG 配置中不存在对应的Record: ". $topicName);
             }
@@ -91,24 +94,55 @@ class ErrorHandlingRepositories
             if (!$self::$topicsCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
                 throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
             }
-            
+            unset($logDataDecrypt);
             Redis::lrem($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], $logData);
             $topicfailJob = sprintf(self::$kafkaTopicFailJobTemp, self::$topicsCommonRepositories::$runProject, $topicName);
             Redis::lrem($topicfailJob, $logData);
         } catch (\Exception $e) {
+            $this->setEorrorMessage($topicName, $logData, self::$queueNameBy5min);
             CLog::error($e->getMessage() . '(' . $e->getLine() .')');
-        }   
+        }
+        unset($logData);
     }
 
     public function handle5minFailMessage()
     {
-        $len = Redis::LLEN(self::$queueNameBy5min);
-        for ($i = 0; $i < $len; $i++) {
-            $logData = Redis::BRPOPLPUSH(self::$queueNameBy5min, self::$commonFailQueueName, self::$maxTimeout);
-            if ($logData) {
-                $this->commonHandleMessage($logData);
-                unset($logData);
-            }
+        try {
+            for ($i = 0; $i < self::$fiveMinTopicCommonRepositories::$topicNums; $i++) {
+
+                $keyArr = self::$fiveMinTopicCommonRepositories->getTopicsKey();
+                $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
+
+                $len = Redis::LLEN($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY]);
+                $topicAssemble = [];
+                for ($i = 0; $i < $len; $i++) {
+                    $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
+                    
+                    if (empty($logData)) continue;
+                    $topicAssemble[] = $logData;
+    
+                    $appLog = self::$fiveMinTopicCommonRepositories::$appLog;
+                    if (!isset($appLog[$topicName])) {
+                        break;
+                        // throw new \Exception("APP LOG 配置中不存在对应的Record: ". $topicName);
+                    }
+    
+                    $logDataDecrypt = unserialize(gzuncompress(unserialize($logData)));
+                    unset($logData);
+                    if (!$self::$fiveMinTopicCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
+                        break;
+                        // throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
+                    }
+                    unset($logDataDecrypt);
+                }
+
+                foreach($topicAssemble as $topicData) {
+                    Redis::lrem($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], $topicData);
+                }
+                unset($topicAssemble);
+            } 
+        } catch (\Exception $e) {
+            CLog::error($e->getMessage() . '(' . $e->getLine() .')');
         }
     }
 
@@ -118,9 +152,12 @@ class ErrorHandlingRepositories
         Redis::LREM($queueName2, $data);
     }
 
-    public function setEorrorMessage($topicName, $logData)
+    public function setEorrorMessage($topicName, $logData, $queueName = '')
     {
-        $key = sprintf(self::$failQueueName, self::$projectID, $topicName);
+        if (empty($queueName)) {
+            $queueName = self::$failQueueName;
+        }
+        $key = sprintf($queueName, self::$topicsCommonRepositories::$runProject, $topicName);
         Redis::LPUSH($key, $logData);
     }
 }
