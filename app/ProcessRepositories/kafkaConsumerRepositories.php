@@ -60,7 +60,6 @@ class kafkaConsumerRepositories
         foreach(self::$rdkafkaConsumerConfig as $key => $data){
             if (isset($data['func'])) {
                 $val = call_user_func([$this, $data['func']]);
-                print_r($val);
             } else {
                 $val = $data['val'];
             }
