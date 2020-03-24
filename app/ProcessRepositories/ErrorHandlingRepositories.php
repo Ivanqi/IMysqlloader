@@ -12,23 +12,27 @@ class ErrorHandlingRepositories
     private static $queueName;
     private static $queueNameBy5min;
     private static $commonFailQueueName;
-    private static $appLog;
+    
     private static $dbHandlerFuncInstance;
+    private static $failQueueName;
     private static $failQueueTimer = 0;
     private static $failQueueTimerKeyBy5min;
     private static $timeStampBy5min = 300;
     public static $maxTimeout;
+    private static $topicsCommonRepositories;
+    private static $kafkaTopicFailJobTemp;
+
+   
 
     public function __construct()
     {
-        self::$projectID = (int) config('project_config.project_id');
-        self::$projectName = config('project_config.project_name');
-        self::$commonFailQueueName = config('fail_logjob.commo_queue_name');
+        self::$topicsCommonRepositories = TopicsCommonRepositories::getInstance(config('fail_logjob.fail_queue_name'), config('fail_logjob.commo_queue_name'));
+        
         self::$queueNameBy5min = config('fail_logjob.5min_fail_queue_name');
-        self::$appLog = config('app_log_' . self::$projectID);
-        // self::$dbHandlerFuncInstance = DataBaseHandleFunc::getInstance(self::$projectName, self::$projectID);
         self::$failQueueTimerKeyBy5min = config('queue_max_timeout.5min_fail_queue_timer');
         self::$maxTimeout = config('fail_logjob.queue_max_timeout');
+        self::$failQueueName = config('fail_logjob.fail_queue_name');
+        self::$kafkaTopicFailJobTemp = config('kafka_config.kafka_topic_fail_job');
     }
 
     public static function getInstance()
@@ -69,31 +73,31 @@ class ErrorHandlingRepositories
         self::$failQueueTimer = $now + self::$timeStampBy5min;
     }
 
-    private function commonHandleMessage(string $logData): void
-    {
-        $logDataJson = json_decode($logData, true);
-        $firstKey = array_key_first($logDataJson);
-
-        // if (!isset(self::$appLog[$firstKey])) {
-        //     $this->commonFail(self::$queueNameBy5min, self::$commonFailQueueName, $logData);
-        //     CLog::error(__CLASS__.": APP LOG 配置中不存在对应的Record: ". $firstKey);
-        // } else {
-        //     $data = $logDataJson[$firstKey];
-        //     if (!$this->insertData($data, $firstKey, self::$appLog[$firstKey])) {
-        //         $this->commonFail(self::$queueNameBy5min, self::$commonFailQueueName, $logData);
-        //     }
-        //     unset($data);
-        // }
-        // unset($logDataJson);
-    }
-
     public function handleFailMessage(): void
     {
-        $logData = Redis::BRPOPLPUSH(self::$queueName, self::$commonFailQueueName, self::$maxTimeout);
-        if ($logData) {
-            $this->commonHandleMessage($logData);
-            unset($logData);
-        }
+        try {
+            $keyArr = self::$topicsCommonRepositories->getTopicsKey();
+            $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
+            $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
+            if (empty($logData)) return;
+
+            $appLog = self::$topicsCommonRepositories;
+            if (!isset($appLog[$topicName])) {
+                throw new \Exception("APP LOG 配置中不存在对应的Record: ". $topicName);
+            }
+
+            $logDataDecrypt = unserialize(gzuncompress(unserialize($logData)));
+
+            if (!$self::$topicsCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
+                throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
+            }
+            
+            Redis::lrem($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], $logData);
+            $topicfailJob = sprintf(self::$kafkaTopicFailJobTemp, self::$topicsCommonRepositories::$runProject, $topicName);
+            Redis::lrem($topicfailJob, $logData);
+        } catch (\Exception $e) {
+            CLog::error($e->getMessage() . '(' . $e->getLine() .')');
+        }   
     }
 
     public function handle5minFailMessage()
@@ -108,29 +112,15 @@ class ErrorHandlingRepositories
         }
     }
 
-    private function insertData(array $payload, string $recordName, $recordConfig): bool
-    {
-        $backgrouds = $recordConfig['backgrouds'];
-        $tableName = $recordConfig['table'];
-        $saveMode = $recordConfig['save_mode'];
-        $flag = true;
-        try {
-            foreach($backgrouds as $bg) {
-                $ret = self::$dbHandlerFuncInstance->insertData($bg, $saveMode, $tableName, $payload);
-                if ($ret == false) $flag = false;
-            }
-            return $flag;
-        } catch(\Exception $e) {
-            CLog::error(__CLASS__ . ':' . $e->getMessage());
-            return false;
-        }
-    }
-
     private function commonFail(string $queueName1, strig $queueName2, string $data): void
     {
         Redis::LPUSH($queueName1, $data);
         Redis::LREM($queueName2, $data);
     }
 
-
+    public function setEorrorMessage($topicName, $logData)
+    {
+        $key = sprintf(self::$failQueueName, self::$projectID, $topicName);
+        Redis::LPUSH($key, $logData);
+    }
 }

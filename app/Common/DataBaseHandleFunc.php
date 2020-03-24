@@ -18,6 +18,7 @@ class DataBaseHandleFunc
     private $tableName = '';
     private $dbPoolName = '';
     private $insertStatementExtensionIns;
+    private static $dbNameList;
 
     private static $_instance;
 
@@ -93,7 +94,12 @@ class DataBaseHandleFunc
                     $error = true; 
                     break;
                 }
-                $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
+                $index = $this->projectName . $this->agentConfig[$check1Key] . $check2Key . __FUNCTION__;
+                if (isset(self::$dbNameList[$index])) {
+                    $dbName = self::$dbNameList[$index];
+                } else {
+                    $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
+                }
                 $sql = $this->insertStatementExtensionIns->makeMultiInsertSql($val, $this->tableName, $this->saveMode);
                 $ret = DB::db($dbName)->insert($sql);
                 if ($ret == false) $flag = false; 
@@ -116,7 +122,13 @@ class DataBaseHandleFunc
     {
         DB::connection($this->dbPoolName)->beginTransaction();
         try {
-            $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName);
+            $index = $this->projectName . __FUNCTION__;
+            if (isset(self::$dbNameList[$index])) {
+                $dbName = self::$dbNameList[$index];
+            } else {
+                $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName);
+            }
+            
             $sql = $this->insertStatementExtensionIns->makeMultiInsertSql($data, $this->tableName, $this->saveMode);
             $ret = DB::db($dbName)->insert($sql);
             if ($ret) {

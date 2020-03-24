@@ -33,6 +33,7 @@ class DataBaseRuleTransform
         }
         $args = func_get_args();
         array_shift($args);
+        
         $numargs = count($args);
         $modeConfig = $this->databaseRule[$mode];
         $parameter = $modeConfig[$this->dbParameter];

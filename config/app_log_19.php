@@ -3,17 +3,17 @@ return [
     'log_god_body_op' => [
         'backgrouds' => [
             'admin',
-            // 'common'
+            'common'
         ],
-        'save_mode' => 'update', 
+        'save_mode' => 'replace', 
         'table' => 't_log_god_body_op'
     ],
     'log_barter' => [
         'backgrouds' => [
             'admin',
-            // 'common'
+            'common'
         ],
         'save_mode' => 'update',
-        'table' => 't_log_god_body_op'
+        'table' => 't_log_barter'
     ]
 ];

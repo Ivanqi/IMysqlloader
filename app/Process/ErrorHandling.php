@@ -29,7 +29,7 @@ class ErrorHandling implements ProcessInterface
             //     $errorHandlingRepositories->handle5minFailMessage();
             // }
             // $errorHandlingRepositories->handleFailMessage();
-            Coroutine::sleep(0.1);
+            Coroutine::sleep(1);
         }
     }
 }
