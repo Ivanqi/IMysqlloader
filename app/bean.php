@@ -82,7 +82,7 @@ return [
         'port'     => 6379,
         'database' => 0,
         'option'   => [
-            'prefix' => 'iagent:'
+            'prefix' => 'imysqlloader:'
         ]
     ],
     'redis.pool' => [

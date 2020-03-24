@@ -1,7 +1,6 @@
 <?php declare(strict_types=1);
+namespace App\Common;
 use Swoft\Db\DB;
-use DataBaseRuleTransform;
-use InsertStatementExtension;
 use App\Exception\DataBaseHandleFuncException;
 
 class DataBaseHandleFunc
@@ -33,7 +32,7 @@ class DataBaseHandleFunc
         $this->insertStatementExtensionIns = InsertStatementExtension::getInstance();
     }
 
-    public static function getInstance(string $projectName, int $projectID ):  \App\Common\DataBaseHandleFunc
+    public static function getInstance(string $projectName, int $projectID )
     {
         if (!self::$_instance) {
             self::$_instance = new self($projectName, $projectID);
@@ -44,80 +43,91 @@ class DataBaseHandleFunc
     public function insertData(string $bg, string $mode, string $tableName, array $data)
     {
         try {
-            if (!isset($this->handleFuncRule[$bg])) throw new \DataBaseHandleFuncException(__CLASS__ . ":" . DataBaseHandleFuncException::NO_RULE);
+            if (!isset($this->handleFuncRule[$bg])) throw new DataBaseHandleFuncException(__CLASS__ . ":" . DataBaseHandleFuncException::NO_RULE);
 
-            if (!method_exists($this, $this->handleFuncRule[$bg][$this->callFunc])) throw new \DataBaseHandleFuncException(__CLASS__. ": " . DataBaseHandleFuncException::NO_METHOD);
+            if (!method_exists($this, $this->handleFuncRule[$bg][$this->callFunc])) throw new DataBaseHandleFuncException(__CLASS__. ": " . DataBaseHandleFuncException::NO_METHOD);
             $this->bg = $bg;
             $this->saveMode = $mode;
             $this->tableName = $tableName;
-     
-            call_user_func_array([$this, $this->handleFuncRule[$bg]], [$data]);
+            $func = $this->handleFuncRule[$bg][$this->callFunc];
+            \call_user_func_array([$this, $func], [$data]);
             return true;
         } catch(\Exception $e) {
-            throw new \DataBaseHandleFuncException($e->getMessage());
+            throw new DataBaseHandleFuncException($e->getMessage());
         }
     }
 
-    private function adminHandlerFunc(array $data)
+    public function adminHandlerFunc($data)
     {
         $tmp = [];
         $needCheckParameter = [];
 
-        if (isset($this->handleFuncRule[$this->needParameter])) {
-            $needCheckParameter = $this->handleFuncRule[$this->needParameter];
+        if (isset($this->handleFuncRule[$this->bg][$this->needParameter])) {
+            $needCheckParameter = $this->handleFuncRule[$this->bg][$this->needParameter];
         }
+
+        if (empty($needCheckParameter)) {
+            throw new DataBaseHandleFuncException(DataBaseHandleFuncException::DATA_FORMAT_EXCEPTION);
+        }
+
         $error = false;
         $connector = '-';
         foreach ($data as $v) {
-            if (empty($needCheckParameter)) break;
-            if (!isset($v[$needCheckParameter[0]]) || !isset($v[$needCheckParameter[1]])) $error = true; break;
-            $tmp[$v[$needCheckParameter[0]] . $connector . $v[$needCheckParameter[1]]][] = $v;
+            if (!isset($v[$needCheckParameter[0]]) || !isset($v[$needCheckParameter[1]])) {
+                $error = true; 
+                break;
+            }
+            $key = $v[$needCheckParameter[0]] . $connector . $v[$needCheckParameter[1]];
+            $tmp[$key][] = $v;
         }
-
         if ($error == true || empty($tmp)) {
-            throw new \DataBaseHandleFuncException(DataBaseHandleFuncException::DATA_FORMAT_EXCEPTION);
+            throw new DataBaseHandleFuncException(DataBaseHandleFuncException::DATA_FORMAT_EXCEPTION);
         }
         unset($data);
-        DB::connection(self::$dbPoolName)->beginTransaction();
+        DB::connection($this->dbPoolName)->beginTransaction();
         $flag = true;
         try {
             foreach ($tmp as $checkKey => $val) {
-                @list($check1Key, $check2Key) = explode($connector, $check1Key);
-                if (!isset($this->agentConfig[$check1Key])) $error == true; break;
-                $dbName = $this->dataBaseRuleTransform($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
+                @list($check1Key, $check2Key) = explode($connector, $checkKey);
+                if (!isset($this->agentConfig[$check1Key])) {
+                    $error = true; 
+                    break;
+                }
+                $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName, $this->agentConfig[$check1Key], $check2Key);
                 $sql = $this->insertStatementExtensionIns->makeMultiInsertSql($val, $this->tableName, $this->saveMode);
                 $ret = DB::db($dbName)->insert($sql);
                 if ($ret == false) $flag = false; 
             }
-            if ($flag) {
-                DB::connection(self::$dbPoolName)->commit();
-            } else {
-                DB::connection(self::$dbPoolName)->rollBack();
-                throw new \DataBaseHandleFuncException(__CLASS__. ":" . __FUNCTION__ . ", " . DataBaseHandleFuncException::DATA_WRITE_FAILED);
-            }
             unset($tmp);
+            if ($flag) {
+                DB::connection($this->dbPoolName)->commit();
+            } else {
+                DB::connection($this->dbPoolName)->rollBack();
+                throw new DataBaseHandleFuncException(__CLASS__. ":" . __FUNCTION__ . ", " . DataBaseHandleFuncException::DATA_WRITE_FAILED);
+            }
         } catch(\Exception $e){
-            DB::connection(self::$dbPoolName)->rollBack();
-            throw new \DataBaseHandleFuncException($e->getMessage());
+            unset($tmp);
+            DB::connection($this->dbPoolName)->rollBack();
+            throw new DataBaseHandleFuncException($e->getMessage());
         }
     }
 
-    private function commonHandlerFunc(array $data)
+    public function commonHandlerFunc($data)
     {
-        DB::connection(self::$dbPoolName)->beginTransaction();
+        DB::connection($this->dbPoolName)->beginTransaction();
         try {
-            $dbName = $this->dataBaseRuleTransform($this->bg, $projectName);
+            $dbName = $this->dataBaseRuleTransform->getDBName($this->bg, $this->projectName);
             $sql = $this->insertStatementExtensionIns->makeMultiInsertSql($data, $this->tableName, $this->saveMode);
             $ret = DB::db($dbName)->insert($sql);
             if ($ret) {
-                DB::connection(self::$dbPoolName)->commit();
+                DB::connection($this->dbPoolName)->commit();
             } else {
-                throw new \DataBaseHandleFuncException(__CLASS__. ":" . __FUNCTION__ . ", " . DataBaseHandleFuncException::DATA_WRITE_FAILED);
+                throw new DataBaseHandleFuncException(__CLASS__. ":" . __FUNCTION__ . ", " . DataBaseHandleFuncException::DATA_WRITE_FAILED);
             }
             unset($data);
         } catch(\Exception $e) {
-            DB::connection(self::$dbPoolName)->rollBack();
-            throw new \DataBaseHandleFuncException($e->getMessage());
+            DB::connection($this->dbPoolName)->rollBack();
+            throw new DataBaseHandleFuncException($e->getMessage());
         }
     }
 }

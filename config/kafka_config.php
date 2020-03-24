@@ -6,4 +6,9 @@ return [
     'kafka_topic_rule' => '%s_%s_%s',
     'kafka_consumer_time' => 15000,
     'kafka_consumer_fail_job' => 'icleaner_%s_%s_consumer_fail_obj',
+    'kafka_topic_job' => '%s_%s_topic_job',
+    'kafka_topic_fail_job' => '%s_%s_topic_fail_job',
+    'kafka_test_env' => env('KAFKA_TEST_ENV', true),
+    'queue_max_timeout' => 5,
+    'queue_max_times' => env('QUEUE_MAX_TIMES', 22)
 ];

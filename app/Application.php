@@ -30,7 +30,7 @@ class Application extends SwoftApplication
     public function getCLoggerConfig(): array
     {
         return [
-            'name'    => 'icleaner',
+            'name'    => 'imysqlloader',
             'enable'  => true,
             'output'  => true,
             'levels'  => 'error',

@@ -23,8 +23,6 @@ use App\Common\DataBaseHandleFunc;
  * Class LogProcess
  *
  * @since 2.0
- *
- * @Process(workerId={0,1,2})
  */
 class LogProcess implements ProcessInterface
 {

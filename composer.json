@@ -6,12 +6,6 @@
     "swoole",
     "swoft"
   ],
-  "repositories": [
-    {
-      "type": "vcs",
-      "url": "https://github.com/Ivanqi/SnowflakeIdWorker.git"
-    }
-  ],
   "description": "Modern High performance AOP and Coroutine PHP Framework",
   "license": "Apache-2.0",
   "require": {
@@ -57,8 +51,7 @@
   },
   "require-dev": {
     "swoft/swoole-ide-helper": "dev-master",
-    "phpunit/phpunit": "^7.5",
-    "Ivanqi/SnowflakeIdWorker": "dev-master"
+    "phpunit/phpunit": "^7.5"
   },
   "autoload": {
     "psr-4": {
