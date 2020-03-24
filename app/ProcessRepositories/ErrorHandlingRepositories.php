@@ -112,34 +112,29 @@ class ErrorHandlingRepositories
 
                 $keyArr = self::$fiveMinTopicCommonRepositories->getTopicsKey();
                 $topicName = $keyArr[TopicsCommonRepositories::TOPIC_NAME];
+                $falg = true;
 
                 $len = Redis::LLEN($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY]);
-                $topicAssemble = [];
                 for ($i = 0; $i < $len; $i++) {
                     $logData = Redis::BRPOPLPUSH($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_JOB_KEY], $keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], self::$maxTimeout);
                     
                     if (empty($logData)) continue;
-                    $topicAssemble[] = $logData;
     
                     $appLog = self::$fiveMinTopicCommonRepositories::$appLog;
                     if (!isset($appLog[$topicName])) {
-                        break;
+                        continue;
                         // throw new \Exception("APP LOG 配置中不存在对应的Record: ". $topicName);
                     }
     
                     $logDataDecrypt = unserialize(gzuncompress(unserialize($logData)));
-                    unset($logData);
                     if (!$self::$fiveMinTopicCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
-                        break;
+                        continue;
                         // throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
                     }
                     unset($logDataDecrypt);
+                    Redis::lrem($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], $logData);
+                    unset($logData);
                 }
-
-                foreach($topicAssemble as $topicData) {
-                    Redis::lrem($keyArr[TopicsCommonRepositories::KAFKA_TOPIC_FAILE_JOB_KEY], $topicData);
-                }
-                unset($topicAssemble);
             } 
         } catch (\Exception $e) {
             CLog::error($e->getMessage() . '(' . $e->getLine() .')');
