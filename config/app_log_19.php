@@ -13,7 +13,7 @@ return [
             'admin',
             'common'
         ],
-        'save_mode' => 'update',
+        'save_mode' => 'replace',
         'table' => 't_log_barter'
     ]
 ];
