@@ -6,8 +6,8 @@ return [
         'update' => 'INSERT INTO %s (%s) VALUES %s ON DUPLICATE KEY UPDATE %s'
     ],
     'single_insert_func' => [
-        'normal' => 'makeInsertIgoreSql',
-        'replace' => 'makeReplaceIntoSql',
+        'normal' => 'makeInsertWithReplaceIntoSql',
+        'replace' => 'makeInsertWithReplaceIntoSql',
         'update' => 'makeDuplicateInsertSql'
     ],
     'multi_insert_func' => [

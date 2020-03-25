@@ -12,7 +12,7 @@ use App\ProcessRepositories\TopicsProcessRepositories;
  * Class TopicsProcess
  *
  * @since 2.0
- * @Process(workerId={3})
+ * @Process(workerId={3, 4})
  */
 class TopicsProcess implements ProcessInterface
 {

@@ -67,7 +67,7 @@ class ErrorHandlingRepositories
         }
     }
 
-    private function setTimeStampBy5min(int $now): void
+    public function setTimeStampBy5min(int $now): void
     {
         Redis::SETNX(self::$failQueueTimerKeyBy5min, $now + self::$timeStampBy5min);
         self::$failQueueTimer = $now + self::$timeStampBy5min;
@@ -89,7 +89,7 @@ class ErrorHandlingRepositories
 
             $logDataDecrypt = unserialize(gzuncompress(unserialize($logData)));
 
-            if (!$self::$topicsCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
+            if (!self::$topicsCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
                 throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
             }
             unset($logDataDecrypt);
@@ -125,7 +125,7 @@ class ErrorHandlingRepositories
                     }
     
                     $logDataDecrypt = unserialize(gzuncompress(unserialize($logData)));
-                    if (!$self::$fiveMinTopicCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
+                    if (!self::$fiveMinTopicCommonRepositories->insertData($logDataDecrypt, $topicName, $appLog[$topicName])) {
                         continue;
                         // throw new \Exception("数据插入失败，对应的Record: ". $keyArr[$topicName]);
                     }

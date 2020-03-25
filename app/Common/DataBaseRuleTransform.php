@@ -29,7 +29,7 @@ class DataBaseRuleTransform
     public function getDBName($mode)
     {
         if (!isset($this->databaseRule[$mode])) {
-            throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::NO_RULE);
+            throw new DataBaseRuleTransformException(DataBaseRuleTransformException::NO_RULE);
         }
         $args = func_get_args();
         array_shift($args);
@@ -43,12 +43,12 @@ class DataBaseRuleTransform
             $parameter--;
         }
 
-        if ($numargs != $parameter) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::PARAMETER_ERROR);
+        if ($numargs != $parameter) throw new DataBaseRuleTransformException(DataBaseRuleTransformException::PARAMETER_ERROR);
 
         $name = '';
         for ($i = 0; $i < $parameter; $i++) {
             $arg  = array_shift($args);
-            if (!$arameterCheck[$i]($arg)) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::TYPE_ERROR);
+            if (!$arameterCheck[$i]($arg)) throw new DataBaseRuleTransformException(DataBaseRuleTransformException::TYPE_ERROR);
             $name .= $arg . $separator;
         }
 
@@ -58,7 +58,7 @@ class DataBaseRuleTransform
             $name = substr($name, 0, -1);
         }
 
-        if (empty($name)) throw new \DataBaseRuleTransformException(DataBaseRuleTransformException::EMPTY_DATA);
+        if (empty($name)) throw new DataBaseRuleTransformException(DataBaseRuleTransformException::EMPTY_DATA);
 
         return $name;
     }

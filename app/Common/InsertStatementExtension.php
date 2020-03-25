@@ -28,12 +28,11 @@ class InsertStatementExtension
         }
         return self::$_instance;
     }
-
    
     public function makeSingleInsertSql(array $data, string $table, string $mode = self::normal): string
     {
         if (!isset($this->singleInsertFunc[$mode])) {
-            throw new \InsertStatementExtensionException(InsertStatementExtensionException::NO_EXISTS_METHOD);
+            throw new InsertStatementExtensionException(InsertStatementExtensionException::NO_EXISTS_METHOD);
         }
         $this->saveMode = $mode;
         return call_user_func_array([__CLASS__, $this->singleInsertFunc[$mode]], [$data, $table]);
@@ -42,7 +41,7 @@ class InsertStatementExtension
     public function makeMultiInsertSql(array $data, string $table, string $mode = self::normal): string
     {
         if (!isset($this->multiInsertFunc[$mode])) {
-            throw new \InsertStatementExtensionException(InsertStatementExtensionException::NO_EXISTS_METHOD);
+            throw new InsertStatementExtensionException(InsertStatementExtensionException::NO_EXISTS_METHOD);
         }
         $this->saveMode = $mode;
         return call_user_func_array([__CLASS__, $this->multiInsertFunc[$mode]], [$data, $table]);
@@ -65,6 +64,22 @@ class InsertStatementExtension
     }
 
     private function makeReplaceIntoSql(array $data, string $table): string
+    {
+        if (!is_array($data)) return '';
+
+        $keyStr = '';
+        $valStr = '';
+        foreach ($data as $key => $val) {
+            $keyStr .= "`{$key}`,";
+            $valStr .= "'{$val}',";
+        }
+
+        $sql = sprintf($this->insertTemplate[$this->saveMode], $table, trim($keyStr, ', '), '(' . trim($valStr, ', ') . ')');
+        unset($data);
+        return $sql;
+    }
+
+    private function makeInsertWithReplaceIntoSql(array $data, string $table): string
     {
         if (!is_array($data)) return '';
 
