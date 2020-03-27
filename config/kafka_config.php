@@ -10,7 +10,7 @@ return [
     'kafka_topic_fail_job' => '%s_%s_topic_fail_job',
     'kafka_test_env' => env('KAFKA_TEST_ENV', true),
     'queue_max_timeout' => 5,
-    'queue_max_times' => env('QUEUE_MAX_TIMES', 22),
+    'queue_max_times' => env('QUEUE_MAX_TIMES', 20),
     'rdkafka_consumer_config' => [
         // Configure the group.id. All consumer with the same group.id will come
         // different partitions

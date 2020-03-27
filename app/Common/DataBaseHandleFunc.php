@@ -134,6 +134,7 @@ class DataBaseHandleFunc
             if ($ret) {
                 DB::connection($this->dbPoolName)->commit();
             } else {
+                DB::connection($this->dbPoolName)->rollBack();
                 throw new DataBaseHandleFuncException(__CLASS__. ":" . __FUNCTION__ . ", " . DataBaseHandleFuncException::DATA_WRITE_FAILED);
             }
             unset($data);

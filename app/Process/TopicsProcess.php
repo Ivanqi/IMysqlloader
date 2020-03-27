@@ -12,7 +12,7 @@ use App\ProcessRepositories\TopicsProcessRepositories;
  * Class TopicsProcess
  *
  * @since 2.0
- * @Process(workerId={3, 4})
+ * @Process(workerId={3, 4, 5, 6, 7, 8, 9, 10})
  */
 class TopicsProcess implements ProcessInterface
 {
@@ -32,9 +32,9 @@ class TopicsProcess implements ProcessInterface
         while (true) {
             for ($i = 0; $i < self::$maxTimes; $i++) {
                 $topicsProcessRepositories->topicHandler();
+                Coroutine::sleep(0.1);
             }
-            
-            Coroutine::sleep(0.1);
+            Coroutine::sleep(1);
         }
     }
 }
