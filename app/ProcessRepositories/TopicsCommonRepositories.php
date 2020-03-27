@@ -37,7 +37,7 @@ class TopicsCommonRepositories
         self::$topicNums = count(self::$topicList);
         self::$kafkaTopicJobTemp = $kafkaTopicJobTemp;
         self::$kafkaTopicFailJobTemp = $kafkaTopicFailJobTemp;
-        self::$dataMaxChunkLimit = config('project_config.data_max_chunk_limit');
+        self::$dataMaxChunkLimit = (int) config('project_config.data_max_chunk_limit');
         $projectType = config('project_config.project_type');
         $projectType = explode(config('project_config.project_type_delimiter'), $projectType);
         self::$projectType = array_flip($projectType);
