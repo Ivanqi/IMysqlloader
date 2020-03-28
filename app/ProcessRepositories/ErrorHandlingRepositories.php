@@ -46,17 +46,9 @@ class ErrorHandlingRepositories
     public function check5minFailQueue(): bool
     {
         $now = time();
-        if (!Redis::EXISTS(self::$failQueueTimerKeyBy5min)){
-            $this->setTimeStampBy5min($now);
-            return false;
-        }
 
         if (!self::$failQueueTimer) {
-            self::$failQueueTimer = Redis::GET(self::$failQueueTimerKeyBy5min);
-            if (!self::$failQueueTimer) {
-                $this->setTimeStampBy5min($now);
-                return false;
-            }
+            $this->setTimeStampBy5min($now);
         }
         
         if ($now > self::$failQueueTimer) {
@@ -69,7 +61,6 @@ class ErrorHandlingRepositories
 
     public function setTimeStampBy5min(int $now): void
     {
-        Redis::SETNX(self::$failQueueTimerKeyBy5min, $now + self::$timeStampBy5min);
         self::$failQueueTimer = $now + self::$timeStampBy5min;
     }
 

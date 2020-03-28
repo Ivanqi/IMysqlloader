@@ -34,7 +34,6 @@ class TopicsProcess implements ProcessInterface
                 $topicsProcessRepositories->topicHandler();
                 Coroutine::sleep(0.1);
             }
-            Coroutine::sleep(2);
         }
     }
 }
